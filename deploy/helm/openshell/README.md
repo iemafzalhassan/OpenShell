@@ -177,11 +177,9 @@ See the full [OpenShift install guide](https://docs.nvidia.com/openshell/latest/
 # Precreate the openshell namespace
 oc create ns openshell
 
-# Deploy openshell with overrides to allow SCC assignment of fsGroup and runAsUser for the gateway
+# Deploy openshell
 helm install openshell oci://ghcr.io/nvidia/openshell/helm-chart --version <version> -n openshell \
-  --set server.disableTls=true \
-  --set podSecurityContext.fsGroup=null \
-  --set securityContext.runAsUser=null
+  --set server.disableTls=true
 ```
 
 On OpenShift 4.22+, end-to-end TLS is supported via `BackendTLSPolicy`. See the
@@ -393,12 +391,10 @@ namespace to limit access to OpenShell-managed Secrets.
 
 #### OpenShift
 
-Append these flags to any of the PostgreSQL commands above for OpenShift:
+Append this flag to any of the PostgreSQL commands above for OpenShift:
 
 ```
---set server.disableTls=true \
---set podSecurityContext.fsGroup=null \
---set securityContext.runAsUser=null
+--set server.disableTls=true
 ```
 
 ### High availability
@@ -622,7 +618,7 @@ discovery endpoint or its TLS CA.
 | podAnnotations | object | `{}` | Extra annotations to add to the gateway pod. |
 | podLabels | object | `{}` | Extra labels to add to the gateway pod. |
 | podLifecycle.terminationGracePeriodSeconds | int | `30` | Maximum time, in seconds, Kubernetes waits for the gateway to exit before killing it. The gateway exits as soon as shutdown completes; the limit covers supervisor session cleanup and draining queued OCSF records. |
-| podSecurityContext.fsGroup | int | `1000` | fsGroup assigned to the gateway pod. |
+| podSecurityContext.fsGroup | string | `nil` | fsGroup assigned to the gateway pod. Null defaults to 1000 on standard Kubernetes and omits the field on OpenShift to allow dynamic SCC assignment. |
 | priorityClassName | string | `""` | PriorityClass for the gateway pod. The gateway is a control-plane component; when it shares nodes with the workloads it serves, the default priority gives it no advantage under node pressure. Empty = omit the field. |
 | probes.liveness.failureThreshold | int | `3` | Liveness probe failure threshold before the container is restarted. |
 | probes.liveness.initialDelaySeconds | int | `2` | Liveness probe initial delay, in seconds. |
@@ -656,7 +652,7 @@ discovery endpoint or its TLS CA.
 | securityContext.allowPrivilegeEscalation | bool | `false` | Whether the gateway container can gain additional privileges. |
 | securityContext.capabilities.drop | list | `["ALL"]` | Linux capabilities dropped from the gateway container. |
 | securityContext.runAsNonRoot | bool | `true` | Require the gateway container to run as a non-root user. |
-| securityContext.runAsUser | int | `1000` | UID assigned to the gateway container. |
+| securityContext.runAsUser | string | `nil` | UID assigned to the gateway container. Null defaults to 1000 on standard Kubernetes and omits the field on OpenShift to allow dynamic SCC assignment. |
 | securityContext.seccompProfile.type | string | `"RuntimeDefault"` | Seccomp profile applied to the gateway container. |
 | server.auth.allowUnauthenticatedUsers | bool | `false` | UNSAFE: accept unauthenticated CLI/user requests as a local developer principal. Intended only for trusted local Skaffold/k3d development or a fully trusted fronting proxy. Leave false for shared or production clusters. |
 | server.credentialDrivers.kubernetesSecrets.createNamespace | bool | `false` | Create the credential namespace. Requires a namespace other than the release namespace. The Namespace is retained on uninstall so stored credentials survive; an existing Namespace not owned by this release is left untouched. |

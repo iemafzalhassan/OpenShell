@@ -888,3 +888,16 @@ Validate chart values that Helm would otherwise accept silently.
 {{- end -}}
 {{- toYaml $app -}}
 {{- end -}}
+
+{{/*
+Determine whether the target cluster is an OpenShift cluster.
+Checks for OpenShift security (SCC) or route API groups in served API versions.
+*/}}
+{{- define "openshell.isOpenShift" -}}
+{{- if or (.Capabilities.APIVersions.Has "security.openshift.io/v1") (.Capabilities.APIVersions.Has "security.openshift.io/v1/SecurityContextConstraints") (.Capabilities.APIVersions.Has "route.openshift.io/v1") (.Capabilities.APIVersions.Has "route.openshift.io/v1/Route") -}}
+true
+{{- else -}}
+false
+{{- end -}}
+{{- end -}}
+

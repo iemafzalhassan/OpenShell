@@ -48,14 +48,43 @@ spec:
         - host.docker.internal
         - host.openshell.internal
   {{- end }}
-  {{- with .Values.podSecurityContext }}
+  {{- $isOpenShift := eq (include "openshell.isOpenShift" .) "true" }}
+  {{- $podSecurityContext := dict }}
+  {{- if not (kindIs "invalid" .Values.podSecurityContext) }}
+    {{- $podSecurityContext = deepCopy .Values.podSecurityContext }}
+    {{- if and (hasKey $podSecurityContext "fsGroup") (ne (get $podSecurityContext "fsGroup") nil) }}
+      {{/* Explicit non-nil fsGroup is preserved on all platforms. */}}
+    {{- else }}
+      {{- if $isOpenShift }}
+        {{- $_ := unset $podSecurityContext "fsGroup" }}
+      {{- else }}
+        {{- $_ := set $podSecurityContext "fsGroup" 1000 }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if and (not (kindIs "invalid" .Values.podSecurityContext)) (not (empty $podSecurityContext)) }}
   securityContext:
-    {{- toYaml . | nindent 4 }}
+    {{- toYaml $podSecurityContext | nindent 4 }}
   {{- end }}
   containers:
     - name: openshell-gateway
+      {{- $containerSecurityContext := dict }}
+      {{- if .Values.securityContext }}
+        {{- $containerSecurityContext = deepCopy .Values.securityContext }}
+        {{- if and (hasKey $containerSecurityContext "runAsUser") (ne (get $containerSecurityContext "runAsUser") nil) }}
+          {{/* Explicit non-nil runAsUser is preserved on all platforms. */}}
+        {{- else }}
+          {{- if $isOpenShift }}
+            {{- $_ := unset $containerSecurityContext "runAsUser" }}
+          {{- else }}
+            {{- $_ := set $containerSecurityContext "runAsUser" 1000 }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- if and .Values.securityContext (not (empty $containerSecurityContext)) }}
       securityContext:
-        {{- toYaml .Values.securityContext | nindent 8 }}
+        {{- toYaml $containerSecurityContext | nindent 8 }}
+      {{- end }}
       image: {{ include "openshell.image" . | quote }}
       imagePullPolicy: {{ .Values.gateway.image.pullPolicy | default .Values.global.image.pullPolicy }}
       args:

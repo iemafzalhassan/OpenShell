@@ -5,6 +5,7 @@ suite: gateway pod securityContext
 templates:
   - templates/gateway-config.yaml
   - templates/statefulset.yaml
+  - templates/deployment.yaml
 release:
   name: openshell
   namespace: my-namespace
@@ -37,6 +38,9 @@ tests:
           path: spec.template.spec.containers[0].securityContext.runAsNonRoot
           value: true
       - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 1000
+      - equal:
           path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
           value: false
       - equal:
@@ -51,6 +55,73 @@ tests:
     asserts:
       - notExists:
           path: spec.template.spec.securityContext
+
+  - it: omits fsGroup and runAsUser on OpenShift by default
+    template: templates/statefulset.yaml
+    capabilities:
+      apiVersions:
+        - security.openshift.io/v1
+    asserts:
+      - notExists:
+          path: spec.template.spec.securityContext
+      - notExists:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop
+          value:
+            - ALL
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.seccompProfile.type
+          value: RuntimeDefault
+
+  - it: renders explicitly set fsGroup and runAsUser on OpenShift
+    template: templates/statefulset.yaml
+    capabilities:
+      apiVersions:
+        - security.openshift.io/v1
+    set:
+      podSecurityContext:
+        fsGroup: 1000680000
+      securityContext:
+        runAsUser: 1000680000
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 1000680000
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 1000680000
+
+  - it: omits fsGroup and runAsUser on OpenShift detected via route API
+    template: templates/statefulset.yaml
+    capabilities:
+      apiVersions:
+        - route.openshift.io/v1
+    asserts:
+      - notExists:
+          path: spec.template.spec.securityContext
+      - notExists:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+
+  - it: omits fsGroup and runAsUser on OpenShift for Deployment workload
+    template: templates/deployment.yaml
+    capabilities:
+      apiVersions:
+        - security.openshift.io/v1
+    set:
+      workload.kind: deployment
+      server.externalDbSecret: openshell-db
+    asserts:
+      - notExists:
+          path: spec.template.spec.securityContext
+      - notExists:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
 
   - it: derives host aliases from server.hostGatewayIP and not gatewayConfig
     template: templates/statefulset.yaml

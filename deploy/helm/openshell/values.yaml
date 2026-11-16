@@ -243,14 +243,14 @@ podAnnotations: {}
 podLabels: {}
 
 podSecurityContext:
-  # -- fsGroup assigned to the gateway pod.
-  fsGroup: 1000
+  # -- fsGroup assigned to the gateway pod. Null defaults to 1000 on standard Kubernetes and omits the field on OpenShift to allow dynamic SCC assignment.
+  fsGroup: null
 
 securityContext:
   # -- Require the gateway container to run as a non-root user.
   runAsNonRoot: true
-  # -- UID assigned to the gateway container.
-  runAsUser: 1000
+  # -- UID assigned to the gateway container. Null defaults to 1000 on standard Kubernetes and omits the field on OpenShift to allow dynamic SCC assignment.
+  runAsUser: null
   # -- Whether the gateway container can gain additional privileges.
   allowPrivilegeEscalation: false
   capabilities:
